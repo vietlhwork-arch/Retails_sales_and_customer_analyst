@@ -1,0 +1,32 @@
+=== HỒ SƠ HUẤN LUYỆN XGBOOST ===
+
+1. Cấu hình tham số (Hyperparameters):
+ - objective: binary:logistic
+ - enable_categorical: False
+ - eval_metric: logloss
+ - learning_rate: 0.1
+ - max_depth: 5
+ - missing: nan
+ - n_estimators: 100
+ - random_state: 42
+ - scale_pos_weight: 0.10837321520389194
+
+2. Mức độ tác động của các yếu tố (Feature Importances):
+ - Cột số 0: 0.008288404904305935
+ - Cột số 1: 0.009757312946021557
+ - Cột số 2: 0.11446312069892883
+ - Cột số 3: 0.5998778939247131
+ - Cột số 4: 0.042113397270441055
+ - Cột số 5: 0.024941422045230865
+ - Cột số 6: 0.018340937793254852
+ - Cột số 7: 0.0
+ - Cột số 8: 0.009875056333839893
+ - Cột số 9: 0.01415010541677475
+ - Cột số 10: 0.02320036292076111
+ - Cột số 11: 0.01050409022718668
+ - Cột số 12: 0.009427634999155998
+ - Cột số 13: 0.020096933469176292
+ - Cột số 14: 0.009375639259815216
+ - Cột số 15: 0.008956092409789562
+ - Cột số 16: 0.0
+ - Cột số 17: 0.07663151621818542
