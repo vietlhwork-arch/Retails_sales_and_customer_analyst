@@ -1,86 +1,219 @@
 # AdventureWorks Analytics
 
-A complete end-to-end analytics project for the AdventureWorks retail dataset:
-data ingestion, cleaning, feature engineering, EDA, modeling, SQL preparation, and a Streamlit dashboard.
+End-to-end retail sales analytics project built from the AdventureWorks CSV dataset. The project integrates raw data, creates a cleaned sales master table, performs exploratory analysis and feature engineering, trains a KMeans clustering baseline, and provides dashboard-ready outputs for Power BI and Streamlit.
 
-## Project goals
+> **Project status:** The reproducible Python pipeline currently implements data preprocessing and KMeans clustering. RFM and XGBoost-related notes may exist in the repository, but they are not executed by the current `src/model_training.py` script.
 
-- Build a clean analytical layer from the raw CSV files.
-- Produce a unified `master_sales.csv` for BI and ML use cases.
-- Explore customer, product, territory, and return behavior.
-- Train baseline models for segmentation or prediction tasks.
-- Provide a lightweight Streamlit app for interactive analysis.
+## Contents
 
-## Suggested dataset layout
+- [Objectives](#objectives)
+- [Data](#data)
+- [Project structure](#project-structure)
+- [Pipeline and outputs](#pipeline-and-outputs)
+- [Installation](#installation)
+- [Running the project](#running-the-project)
+- [Notebook workflow](#notebook-workflow)
+- [Power BI and DAX](#power-bi-and-dax)
+- [Limitations](#limitations)
 
-Place the CSV files you downloaded into `data/raw/`:
+## Objectives
 
-- Calendar Lookup.csv
-- Customer Lookup.csv
-- Product Lookup.csv
-- Product Category Lookup.csv
-- Product Subcategory Lookup.csv
-- Territory Lookup.csv
-- Returns Data.csv
-- Sales Data 2020.csv
-- Sales Data 2021.csv
-- Sales Data 2022.csv
+- Combine AdventureWorks sales and lookup tables into one analytical table.
+- Analyze revenue, cost, profit, customers, products, and territories.
+- Prepare summary tables for BI reporting.
+- Create a baseline unsupervised segmentation model with KMeans.
+- Support interactive exploration through a lightweight Streamlit application.
 
-The exact filenames can vary a little; the loader tries to match by keywords.
+## Data
 
-## Main outputs
+Place the source CSV files in `data/raw/`. The preprocessing script identifies files by keywords, but the following filenames are the expected dataset files:
 
-- `data/processed/master_sales.csv`
-- `data/processed/customer_summary.csv`
-- `data/processed/product_summary.csv`
-- `data/processed/territory_summary.csv`
-- `reports/eda_report.html`
-- `reports/model_metrics.json`
-- `dashboards/README.md` for Power BI guidance
+- `AdventureWorks Calendar Lookup.csv`
+- `AdventureWorks Customer Lookup.csv`
+- `AdventureWorks Product Categories Lookup.csv`
+- `AdventureWorks Product Subcategories Lookup.csv`
+- `AdventureWorks Product Lookup.csv`
+- `AdventureWorks Territory Lookup.csv`
+- `AdventureWorks Returns Data.csv`
+- `AdventureWorks Sales Data 2020.csv`
+- `AdventureWorks Sales Data 2021.csv`
+- `AdventureWorks Sales Data 2022.csv`
 
-## How to run
+The raw files are not modified. Do not commit private or licensed data if the project is published publicly.
 
-### 1) Create a virtual environment
+## Project structure
 
-```bash
-python -m venv .venv
+```text
+AdventureWorks_Analytics/
+├── app/
+│   ├── kmeans_readable_info.txt
+│   ├── streamlit_app.py
+│   └── xgboost_readable_info.txt
+├── dashboards/
+│   └── README.md
+├── data/
+│   ├── raw/                       # Source CSV files
+│   └── processed/                 # Generated analytical tables
+├── notebooks/
+│   ├── 01_data_integration.ipynb
+│   ├── 02_eda_analysis.ipynb
+│   ├── 03_feature_engineering.ipynb
+│   ├── 04_modeling.ipynb
+│   ├── 05_export_for_powerbi.ipynb
+│   └── data/processed/            # Notebook-specific data area
+├── reports/
+│   ├── README.md
+│   ├── data_dictionary.csv
+│   └── master_sales_sample.csv
+├── sql_scripts/
+│   └── data_extraction.sql
+├── src/
+│   ├── data_preprocessing.py
+│   └── model_training.py
+├── dax_measures.md
+├── requirements.txt
+└── README.md
 ```
 
-### 2) Install dependencies
+## Pipeline and outputs
 
-```bash
+### Preprocessing
+
+`src/data_preprocessing.py`:
+
+1. Finds the required CSV files in `data/raw/`.
+2. Loads files with common encodings (`utf-8`, `cp1252`, `latin1`).
+3. Normalizes column names to lowercase `snake_case`.
+4. Concatenates the 2020, 2021, and 2022 sales files.
+5. Joins product, customer, territory, category, subcategory, and calendar data.
+6. Calculates `revenue`, `cost`, `profit`, `order_year`, `order_month`, `order_quarter`, and `age`.
+7. Writes the master table, summary tables, and metadata.
+
+Generated files in `data/processed/`:
+
+- `master_sales.csv` — merged row-level sales table.
+- `customer_summary.csv` — top customer keys by revenue.
+- `product_summary.csv` — top product keys by revenue.
+- `territory_summary.csv` — top territory keys by revenue.
+- `metadata.json` — row count, column count, and output schema.
+- `ml_features_rfm.csv`, `ml_features_xgboost.csv`, `PowerBI_Customer_Segments.csv`, and `PowerBI_Returns_Forecast.csv` — existing analytical exports; they are not generated by the current CLI preprocessing script.
+
+The current processed metadata records 56,046 rows and 44 columns. Exact totals can change when the raw data is replaced or regenerated.
+
+### Modeling
+
+`src/model_training.py` currently trains a KMeans pipeline using available numeric fields such as `revenue`, `cost`, `profit`, `orderquantity`, `productprice`, `productcost`, `age`, and `return_rate`, plus available categorical fields. Numeric values are imputed and standardized; categorical values are imputed and one-hot encoded.
+
+Generated files in `reports/` after modeling:
+
+- `clustered_customers_or_sales.csv` — model input rows with a `cluster` label.
+- `kmeans_pipeline.joblib` — serialized preprocessing and model pipeline.
+- `model_metrics.json` — cluster count, silhouette score, rows used, and features used.
+
+Despite its filename, `clustered_customers_or_sales.csv` is row-level output unless a customer-level feature table is supplied as the model input.
+
+### Streamlit application
+
+The app reads `data/processed/master_sales.csv` and displays:
+
+- row and column counts;
+- total revenue and profit when those columns exist;
+- revenue over time;
+- revenue by geography;
+- top products or categories;
+- a preview of the master table.
+
+## Installation
+
+Run all commands from the project root, the directory containing this README.
+
+### Windows PowerShell
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-### 3) Run preprocessing
+If PowerShell blocks activation, use a process-scoped policy change for the current terminal only:
 
-```bash
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
+```
+
+The required packages include pandas, NumPy, scikit-learn, XGBoost, Streamlit, Plotly, Matplotlib, Seaborn, OpenPyXL, and Joblib.
+
+## Running the project
+
+### 1. Build processed data
+
+```powershell
 python -m src.data_preprocessing --raw-dir data/raw --out-dir data/processed
 ```
 
-### 4) Run modeling
+This command requires all ten expected input files, including the three yearly sales files.
 
-```bash
+### 2. Train the KMeans baseline
+
+```powershell
 python -m src.model_training --input data/processed/master_sales.csv --out reports
 ```
 
-### 5) Launch the app
+The default model uses four clusters and a fixed random seed of 42.
 
-```bash
+### 3. Start the Streamlit dashboard
+
+```powershell
 streamlit run app/streamlit_app.py
 ```
 
-## Folder purpose
+Open the local URL printed by Streamlit in a browser. The app must be started from the project root because it uses the relative path `data/processed/master_sales.csv`.
 
-- `data/raw/`: original source CSV files
-- `data/processed/`: cleaned and merged analytical tables
-- `sql_scripts/`: SQL extraction and transformation queries
-- `notebooks/`: analysis notebooks
-- `src/`: reusable Python code
-- `dashboards/`: Power BI notes and DAX placeholders
-- `app/`: Streamlit app
+### 4. Run notebooks
 
-## Notes
+Open the notebooks in VS Code or Jupyter and run them in numerical order. Run preprocessing first if the notebook expects generated files.
 
-This project is designed so you can swap in the real Kaggle files without changing the code.
-If you later build a `.pbix`, place it under `dashboards/`.
+## Notebook workflow
+
+- `01_data_integration.ipynb` — load, inspect, and integrate source data.
+- `02_eda_analysis.ipynb` — explore sales, customer, product, and territory patterns.
+- `03_feature_engineering.ipynb` — create analytical and machine-learning features.
+- `04_modeling.ipynb` — experiment with segmentation or prediction models.
+- `05_export_for_powerbi.ipynb` — prepare export tables for Power BI.
+
+The notebooks may contain experiments or exports that are broader than the two command-line scripts. Treat the scripts in `src/` as the current reproducible CLI pipeline.
+
+## Power BI and DAX
+
+Use `data/processed/master_sales.csv` and the exported Power BI tables as dashboard sources. Suggested report pages are documented in `dashboards/README.md`:
+
+1. Executive Overview
+2. Product Performance
+3. Customer Segmentation
+4. Geographic Analysis
+5. Returns Analysis
+
+Candidate measures are documented in `dax_measures.md`. Before using them, verify that the Power BI model contains the referenced tables and relationships (`FactSales`, `FactReturns`, `DimDate`, `DimProduct`, and `DimCustomer`). The DAX file is a template, not an automatically validated model; for example, the current Python master table does not merge return rows into sales transactions.
+
+## SQL
+
+`sql_scripts/data_extraction.sql` contains SQL examples for extracting or transforming the dataset. It is supplementary and is not called by the Python pipeline.
+
+## Limitations
+
+- The current preprocessing function receives the returns table but does not merge return quantities or calculate `return_rate` into `master_sales.csv`.
+- The current CLI model is KMeans, not an implemented XGBoost churn or forecasting pipeline.
+- KMeans is trained on rows from the supplied input table; it is not automatically customer-level RFM segmentation.
+- Generated files in `data/processed/` and `reports/` can be overwritten when commands are rerun.
+- Results depend on the exact raw dataset, column names, and join-key quality.
+- The repository does not include payment, campaign, delivery, review, or discount data.
+
+## Technology stack
+
+- Python 3
+- pandas and NumPy for data preparation
+- scikit-learn for preprocessing and KMeans
+- XGBoost, Matplotlib, Seaborn, Plotly, and OpenPyXL for notebook and analysis support
+- Streamlit for interactive exploration
+- SQL and Power BI/DAX for BI preparation
